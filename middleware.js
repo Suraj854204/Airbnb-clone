@@ -37,7 +37,15 @@ module.exports.isOwner = async (req, res, next) => {
 };
 
 module.exports.isReviewAuthor = async (req, res, next) => {
+  try {
   const { id, reviewId } = req.params;
+    
+    // Check if user is logged in first
+    if (!req.user) {
+      req.flash("error", "You must be logged in to do that");
+      return res.redirect("/login");
+    }
+    
   const review = await Review.findById(reviewId);
 
   if (!review) {
@@ -51,6 +59,11 @@ module.exports.isReviewAuthor = async (req, res, next) => {
   }
 
   next();
+  } catch (err) {
+    console.error("Error in isReviewAuthor:", err);
+    req.flash("error", "Something went wrong");
+    return res.redirect(`/listings/${id}`);
+  }
 };
 
 module.exports.validateListing = (req, res, next) => {
@@ -61,6 +74,7 @@ module.exports.validateListing = (req, res, next) => {
   } else {
     next();
   }
+next();
 };
 
 module.exports.validateReview = (req, res, next) => {
@@ -71,4 +85,5 @@ module.exports.validateReview = (req, res, next) => {
   } else {
     next();
   }
+  next();
 };
