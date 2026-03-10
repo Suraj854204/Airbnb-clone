@@ -35,9 +35,6 @@ app.use(express.static(path.join(__dirname, "public")));
 /* ================= SESSION STORE ================= */
 const store = MongoStore.create({
   mongoUrl: dbUrl,
-  crypto: {
-    secret: secret,
-  },
   touchAfter: 24 * 3600,
 });
 
