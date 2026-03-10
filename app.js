@@ -22,8 +22,8 @@ const userRouter = require("./routes/user.js");
 const dbUrl = process.env.ATLASDB_URL;
 const secret = process.env.SECRET || "mysupersecretcode";
 
-async function main() {
-  await mongoose.connect(dbUrl);
+if (!dbUrl) {
+  throw new Error("ATLASDB_URL is missing. Add it in Render Environment Variables.");
 }
 
 /* ================= VIEW ENGINE ================= */
@@ -39,6 +39,9 @@ app.use(express.static(path.join(__dirname, "public")));
 /* ================= SESSION STORE ================= */
 const store = MongoStore.create({
   mongoUrl: dbUrl,
+  crypto: {
+    secret: secret,
+  },
   touchAfter: 24 * 3600,
 });
 
@@ -49,7 +52,7 @@ store.on("error", (err) => {
 /* ================= SESSION ================= */
 const sessionOptions = {
   store,
-  secret: secret,
+  secret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -95,15 +98,19 @@ app.use((req, res) => {
 });
 
 /* ================= SERVER ================= */
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
-main()
-  .then(() => {
+async function startServer() {
+  try {
+    await mongoose.connect(dbUrl);
     console.log("Connected to DB");
+
     app.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
+      console.log(`Server running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
+  } catch (err) {
     console.log("DB Error:", err);
-  });
+  }
+}
+
+startServer();
