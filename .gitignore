@@ -1,2 +1,7 @@
 /node modules
 /node_modules
+.env
+cloudConfig.js
+controllers/
+node_modules/
+public/css/rating.css

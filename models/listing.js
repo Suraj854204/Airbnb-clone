@@ -1,35 +1,41 @@
 const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
 const Review = require("./review.js");
 
-const imageSchema = new mongoose.Schema({
-  filename: String,
-  url: String,
-});
-
-const listingSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  image: { type: imageSchema, required: true },
-  price: { type: Number, required: true },
-  location: { type: String, required: true },
-  country: { type: String, required: true },
+const listingSchema = new Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true, // This ensures description is required
+  },
+  image: {
+    url: String,
+    filename: String,
+  },
+  price: Number,
+  location: String,
+  country: String,
   reviews: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Review"
-    }
+      type: Schema.Types.ObjectId,
+      ref: "Review",
+    },
   ],
   owner: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: "User",
-    required: true
-  }
-});
+  },
+}, { timestamps: true });
 
+// Delete associated reviews when a listing is deleted
 listingSchema.post("findOneAndDelete", async (listing) => {
   if (listing) {
     await Review.deleteMany({ _id: { $in: listing.reviews } });
   }
 });
 
-module.exports = mongoose.model("Listing", listingSchema);
+const Listing = mongoose.model("Listing", listingSchema);
+module.exports = Listing;

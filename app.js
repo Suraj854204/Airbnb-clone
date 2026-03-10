@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -8,6 +10,7 @@ const session = require("express-session");
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
+const MongoStore = require("connect-mongo");
 
 const User = require("./models/user.js");
 
@@ -16,39 +19,50 @@ const reviewsRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
 /* ================= DATABASE ================= */
+const dbUrl = process.env.ATLASDB_URL;
+const secret = process.env.SECRET || "mysupersecretcode";
 
-mongoose.connect("mongodb://127.0.0.1:27017/wanderlust")
-  .then(() => console.log(" MongoDB connection open!"))
-  .catch(err => console.log(err));
+async function main() {
+  await mongoose.connect(dbUrl);
+}
 
 /* ================= VIEW ENGINE ================= */
-
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 /* ================= MIDDLEWARE ================= */
-
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ================= SESSION ================= */
+/* ================= SESSION STORE ================= */
+const store = MongoStore.create({
+  mongoUrl: dbUrl,
+  touchAfter: 24 * 3600,
+});
 
-app.use(session({
-  secret: "mysupersecretcode",
+store.on("error", (err) => {
+  console.log("Session Store Error:", err);
+});
+
+/* ================= SESSION ================= */
+const sessionOptions = {
+  store,
+  secret: secret,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  }
-}));
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  },
+};
 
+app.use(session(sessionOptions));
 app.use(flash());
 
 /* ================= PASSPORT ================= */
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -56,8 +70,7 @@ passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-/* ================= FLASH + CURRENT USER ================= */
-
+/* ================= LOCALS ================= */
 app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
@@ -66,17 +79,31 @@ app.use((req, res, next) => {
 });
 
 /* ================= ROUTES ================= */
+app.get("/", (req, res) => {
+  res.redirect("/listings");
+});
 
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewsRouter);
 app.use("/", userRouter);
 
-app.get("/", (req, res) => {
-  res.redirect("/listings");
+/* ================= 404 HANDLER ================= */
+app.use((req, res) => {
+  res.status(404).render("error.ejs", {
+    err: { statusCode: 404, message: "Page Not Found" },
+  });
 });
 
 /* ================= SERVER ================= */
+const PORT = 8080;
 
-app.listen(8080, () => {
-  console.log(" Server running on port 8080:");
-});
+main()
+  .then(() => {
+    console.log("Connected to DB");
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.log("DB Error:", err);
+  });
