@@ -3,5 +3,4 @@
 .env
 cloudConfig.js
 controllers/
-node_modules/
 public/css/rating.css
