@@ -20,11 +20,7 @@ const userRouter = require("./routes/user.js");
 
 /* ================= DATABASE ================= */
 const dbUrl = process.env.ATLASDB_URL;
-const secret = process.env.SECRET || "mysupersecretcode";
-
-if (!dbUrl) {
-  throw new Error("ATLASDB_URL is missing. Add it in Render Environment Variables.");
-}
+const secret = process.env.SECRET;
 
 /* ================= VIEW ENGINE ================= */
 app.engine("ejs", ejsMate);
